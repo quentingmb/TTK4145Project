@@ -1,0 +1,14 @@
+{
+    "Elevators" :
+    [
+            { "Address":"129.241.187.141"}
+	    
+
+            
+    ],
+    "DefaultListenPort"   :":5555",
+    "Timeout"               : 1,
+    "NumFloor"              : 4,
+    "StopReverseTime"       : 10
+
+}

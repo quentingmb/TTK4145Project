@@ -1,0 +1,17 @@
+#!/usr/bin/bash
+
+export GOPATH="$PWD"
+
+go install network
+go install ElevatorLogic
+go install driver
+go install extra
+go install math
+go install elevator
+go build
+
+if [ -f elevator.log ]; then
+    rm elevator.log
+fi
+
+touch elevator.log
