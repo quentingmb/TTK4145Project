@@ -5,7 +5,8 @@ import (
 	"extra"
 	"Network"
 )
-//This function does a BFS-search through all orders to find the most effective solution
+
+// Nextrequest is made to look into all request in order to get the best elevator
 func Nextrequest(localip string, Elevatorlist []extra.Elevator) Network.Request {
 	var statelist = make(map[string]Network.Info)
 	infolist := Network.GetInfoList()
@@ -82,7 +83,7 @@ requestloop:
 	return Network.NoRequest[0]
 }
 
-//This function return orders the elevator should stop for
+//Stop is made to return the request to the elevator, it will stop for these requests
 func Stop(localip string, mystate string) []Network.Request {
 	var takerequest []Network.Request
 	requestlist := Network.GetRequestList()
@@ -95,7 +96,8 @@ func Stop(localip string, mystate string) []Network.Request {
 	}
 	return takerequest
 }
-//This function returns the next state for the elevator
+
+//This function sends to an elevator its next state
 func Nextstate(localip string, elevators []extra.Elevator, mystate string) (string, []Network.Request) {
 	if Elevator.GetElevObstructionSignal() {
 		Elevator.SetElevStopLamp(1)
