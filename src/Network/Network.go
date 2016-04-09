@@ -78,9 +78,9 @@ func UnpackElevatorMessage(packed []byte, error_c chan string) ElevatorMessage {
 	return message
 }
 
-func InitUpdate(connection *net.TCPConn, myip string, error_c chan string) {
+func InitUpdate(connection *net.TCPConn, localip string, error_c chan string) {
 	pack := make([]byte, 1024)
-	info := infolist[myip]
+	info := infolist[localip]
 	pack = PackElevatorMessage(ElevatorMessage{Request: Request{}, 
 	Info: info}, error_c)
 	time.Sleep(10 * time.Millisecond)
@@ -94,7 +94,7 @@ func InitUpdate(connection *net.TCPConn, myip string, error_c chan string) {
 }
 
 //Check if there is any new orders, if it is it passes it to Neworder
-func Requestdistr(generatedMsgs_c chan ElevatorMessage, myip string) {
+func Requestdistr(generatedMsgs_c chan ElevatorMessage, localip string) {
 	var button Elevator.Elev_button
 	for {
 		for floor, buttons := range Elevator.Button_channel_matrix {
@@ -107,7 +107,7 @@ func Requestdistr(generatedMsgs_c chan ElevatorMessage, myip string) {
 					} else {
 						button = Elevator.BUTTON_COMMAND
 					}
-					NewRequest(generatedMsgs_c, Request{Direction: button, Floor: floor + 1, Type: 1, Ipsource: myip})
+					NewRequest(generatedMsgs_c, Request{Direction: button, Floor: floor + 1, Type: 1, Ipsource: localip})
 					time.Sleep(time.Millisecond)
 				}
 			}
@@ -186,7 +186,7 @@ func SendAliveMessages(connection *net.TCPConn, error_c chan string) {
 	}
 }
 
-func TCPPeerToPeer(conf extra.Config, myip string, generatedmessages_c chan ElevatorMessage) {
+func TCPPeerToPeer(conf extra.Config, localip string, generatedmessages_c chan ElevatorMessage) {
 	elevlog, err := os.OpenFile("elevator.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		fmt.Println("Error opening file: " + err.Error())
@@ -199,7 +199,7 @@ func TCPPeerToPeer(conf extra.Config, myip string, generatedmessages_c chan Elev
 	receivedmessages_c := make(chan ElevatorMessage, 15)
 	error_c := make(chan string, 10)
 	go Listener(listenconn, connections_c, error_c)
-	go Requestdistr(generatedmessages_c, myip)
+	go Requestdistr(generatedmessages_c, localip)
 	go Dialer(connections_c, conf.DefaultListenPort, conf.Elevators, error_c)
 	for {
 		select {
@@ -209,7 +209,7 @@ func TCPPeerToPeer(conf extra.Config, myip string, generatedmessages_c chan Elev
 					connections = append(connections, connection.Address)
 					go Receiver(connection.Address, receivedmessages_c, connections_c, error_c)
 					go SendAliveMessages(connection.Address, error_c)
-					go InitUpdate(connection.Address, myip, error_c)
+					go InitUpdate(connection.Address, localip, error_c)
 				} else {
 					remoteip := strings.Split(connection.Address.RemoteAddr().String(), ":")[0]
 					errorstate := Info{State: "ERROR", PreviousFloor: 0, Inhouse: false, Ipsource: remoteip}
@@ -226,7 +226,7 @@ func TCPPeerToPeer(conf extra.Config, myip string, generatedmessages_c chan Elev
 		case received := <-receivedmessages_c:
 			{
 				if received.Request.Floor > 0 {
-					if !((received.Request.Direction == Elevator.BUTTON_COMMAND) && (received.Request.Ipsource != myip)) {
+					if !((received.Request.Direction == Elevator.BUTTON_COMMAND) && (received.Request.Ipsource != localip)) {
 						Elevator.SetElevButtonLamp(received.Request.Direction, received.Request.Floor, received.Request.Type)
 					}
 					if received.Request.Direction != Elevator.BUTTON_COMMAND {
@@ -275,8 +275,8 @@ func TCPPeerToPeer(conf extra.Config, myip string, generatedmessages_c chan Elev
 }
 
 func SendStatuslist(generatedMsgs_c chan ElevatorMessage) {
-	myip := GetLocalIP()
-	myinfo := infolist[myip]
+	localip := GetLocalIP()
+	myinfo := infolist[localip]
 	generatedMsgs_c <- ElevatorMessage{Request: Request{}, Info: myinfo}
 }
 
@@ -302,4 +302,3 @@ func NewRequest(generatedMsgs_c chan ElevatorMessage, request Request) bool {
 	generatedMsgs_c <- ElevatorMessage{Request: request, Info: Info{}}
 	return true
 }
-
