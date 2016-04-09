@@ -1,4 +1,3 @@
-
 package ElevatorLogic
 
 import (
@@ -7,7 +6,7 @@ import (
 	"Network"
 )
 //This function does a BFS-search through all orders to find the most effective solution
-func Nextrequest(myip string, Elevatorlist []extra.Elevator) Network.Request {
+func Nextrequest(localip string, Elevatorlist []extra.Elevator) Network.Request {
 	var statelist = make(map[string]Network.Info)
 	infolist := Network.GetInfoList()
 	for host, info := range infolist {
@@ -23,7 +22,7 @@ insideloop:
 			if info, ok := statelist[elevator.Address]; ok {
 				if ((info.State == "UP" || info.State == "IDLE") && info.PreviousFloor <= request.Floor) || ((info.State == "DOWN" || info.State == "IDLE") && info.PreviousFloor >= request.Floor) {
 					if info.Ipsource == request.Ipsource {
-						if info.Ipsource == myip {
+						if info.Ipsource == localip {
 							return request
 						} else {
 							delete(statelist, elevator.Address)
@@ -37,7 +36,7 @@ insideloop:
 			if info, ok := statelist[elevator.Address]; ok {
 				if (info.State == "UP" && info.PreviousFloor >= request.Floor) || (info.State == "DOWN" && info.PreviousFloor <= request.Floor){
 					if info.Ipsource == request.Ipsource {
-						if info.Ipsource == myip {
+						if info.Ipsource == localip {
 							return request
 						} else {
 							delete(statelist, elevator.Address)
@@ -57,7 +56,7 @@ requestloop:
 			for _, elevator := range Elevatorlist {
 				if info, ok := statelist[elevator.Address]; ok {
 					if i != 0 && (info.State == "UP" && info.PreviousFloor+i == request.Floor) || (info.State == "DOWN" && info.PreviousFloor-i == request.Floor) {
-						if statelist[elevator.Address].Ipsource == myip {
+						if statelist[elevator.Address].Ipsource == localip {
 							return request
 						} else {
 							delete(statelist, elevator.Address)
@@ -69,7 +68,7 @@ requestloop:
 			for _, elevator := range Elevatorlist {
 				if info, ok := statelist[elevator.Address]; ok {
 					if info.State == "IDLE" && (info.PreviousFloor == request.Floor+i || info.PreviousFloor == request.Floor-i) {
-						if statelist[elevator.Address].Ipsource == myip {
+						if statelist[elevator.Address].Ipsource == localip {
 							return request
 						} else {
 							delete(statelist, elevator.Address)
@@ -84,11 +83,11 @@ requestloop:
 }
 
 //This function return orders the elevator should stop for
-func Stop(myip string, mystate string) []Network.Request {
+func Stop(localip string, mystate string) []Network.Request {
 	var takerequest []Network.Request
 	requestlist := Network.GetRequestList()
 	for _, request := range requestlist {
-		if (request.Direction == Elevator.BUTTON_COMMAND && request.Ipsource == myip) || (request.Direction == Elevator.BUTTON_CALL_UP && mystate == "UP") || (request.Direction == Elevator.BUTTON_CALL_DOWN && mystate == "DOWN") {
+		if (request.Direction == Elevator.BUTTON_COMMAND && request.Ipsource == localip) || (request.Direction == Elevator.BUTTON_CALL_UP && mystate == "UP") || (request.Direction == Elevator.BUTTON_CALL_DOWN && mystate == "DOWN") {
 			if request.Floor == Elevator.CurrentFloor() && Elevator.ElevAtFloor() {
 				takerequest = append(takerequest, request)
 			}
@@ -97,7 +96,7 @@ func Stop(myip string, mystate string) []Network.Request {
 	return takerequest
 }
 //This function returns the next state for the elevator
-func Nextstate(myip string, elevators []extra.Elevator, mystate string) (string, []Network.Request) {
+func Nextstate(localip string, elevators []extra.Elevator, mystate string) (string, []Network.Request) {
 	if Elevator.GetElevObstructionSignal() {
 		Elevator.SetElevStopLamp(1)
 		return "ERROR", nil
@@ -106,12 +105,12 @@ func Nextstate(myip string, elevators []extra.Elevator, mystate string) (string,
 		return "INIT", nil
 	}
 
-	stop := Stop(myip, mystate)
+	stop := Stop(localip, mystate)
 	if len(stop) != 0 {
 		return "DOOR_OPEN", stop
 	}
 
-	next := Nextrequest(myip, elevators)
+	next := Nextrequest(localip, elevators)
 	if Elevator.ElevAtFloor() && next.Floor == Elevator.CurrentFloor() {
 		return "DOOR_OPEN", append(stop, next)
 	}
