@@ -17,14 +17,14 @@ func main() {
 
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	myip := Network.GetLocalIP()
-	Println(myip)
-	myinfo.Ipsource = myip
+	localip := Network.GetLocalIP()
+	Println(localip)
+	myinfo.Ipsource = localip
 
 	conf := extra.LoadConfig("./config/conf.json")
 
 	generatedmessages_c := make(chan Network.ElevatorMessage, 100)
-	go Network.TCPPeerToPeer(conf, myip, generatedmessages_c)
+	go Network.TCPPeerToPeer(conf, localip, generatedmessages_c)
 
 	state := "INIT"
 	driver.Init(driver.ET_comedi)
@@ -71,6 +71,6 @@ func main() {
 				Elevator.SetElevSpeed(0)
 			}
 		}
-		state, takerequest = ElevatorLogic.Nextstate(myip, conf.Elevators, myinfo.State)
+		state, takerequest = ElevatorLogic.Nextstate(localip, conf.Elevators, myinfo.State)
 	}
 }
