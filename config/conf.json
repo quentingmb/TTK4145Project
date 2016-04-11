@@ -7,7 +7,7 @@
             
     ],
     "DefaultListenPort"   :":5555",
-    "Timeout"               : 1,
+    "Timeout"               : 10,
     "NumFloor"              : 4,
     "StopReverseTime"       : 10
 
