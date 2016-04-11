@@ -2,12 +2,12 @@
 
 export GOPATH="$PWD"
 
-go install network
+go install Network
 go install ElevatorLogic
 go install driver
 go install extra
 go install math
-go install elevator
+go install Elevator
 go build
 
 if [ -f elevator.log ]; then
