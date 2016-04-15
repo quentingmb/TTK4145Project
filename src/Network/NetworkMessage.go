@@ -8,12 +8,11 @@ import (
 type Request struct {
  	Direction Elevator.Elev_button
  	Floor int
- 	Type int //internal or external
+ 	Type int //in or out
  	Ipsource string 
  }
  type Info struct {
  	PreviousFloor int
- 	Inhouse bool
  	State string 
  	Ipsource string
  }
