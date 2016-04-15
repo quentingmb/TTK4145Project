@@ -24,7 +24,7 @@ func main() {
 	conf := extra.LoadConfig("./config/conf.json")
 
 	generatedmessages_c := make(chan Network.ElevatorMessage, 100)
-	go Network.TCPPeerToPeer(conf, localip, generatedmessages_c)
+	go Network.NetworkManager(conf, localip, generatedmessages_c)
 
 	state := "INIT"
 	driver.Init(driver.ET_comedi)
