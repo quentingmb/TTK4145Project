@@ -2,9 +2,96 @@ package ElevatorLogic
 
 import (
 	"Elevator"
-	"extra"
 	"Network"
+	"extra"
+	"fmt"
 )
+
+var internalrequest Network.Request
+var externalrequest Network.Request
+
+func InternalOrExternal(request Network.Request) bool {
+
+	if request.Direction == Elevator.BUTTON_COMMAND {
+		return true
+	} else {
+		return false
+	}
+}
+
+func Externalrequest(localip string, Elevatorlist []extra.Elevator, request Network.Request) {
+	var statelist = make(map[string]Network.Info)
+	infolist := Network.GetInfoList()
+	for host, info := range infolist {
+		statelist[host] = info
+	}
+	Externalloop:
+	for _, elevator := range Elevatorlist {
+			if info, ok := statelist[elevator.Address]; ok {
+				if ((info.State == "UP" || info.State == "IDLE") && info.PreviousFloor <= request.Floor) || ((info.State == "DOWN" || info.State == "IDLE") && info.PreviousFloor >= request.Floor) {
+					if info.Ipsource == request.Ipsource {
+						if info.Ipsource == localip {
+							return request
+						} else {
+							delete(statelist, elevator.Address)
+							continue Externalloop
+						}
+					}
+				}
+			}
+		}
+	
+		for _, elevator := range Elevatorlist {
+			if info, ok := statelist[elevator.Address]; ok {
+				if (info.State == "UP" && info.PreviousFloor >= request.Floor) || (info.State == "DOWN" && info.PreviousFloor <= request.Floor){
+					if info.Ipsource == request.Ipsource {
+						if info.Ipsource == localip {
+							return request
+						} else {
+							delete(statelist, elevator.Address)
+							continue Externalloop
+						}
+					}
+				}
+			}
+		}
+	}
+
+func Internalrequest(localip string, Elevatorlist []extra.Elevator, request Network.Request) {
+	var statelist = make(map[string]Network.Info)
+	infolist := Network.GetInfoList()
+	for host, info := range infolist {
+		statelist[host] = info
+	}
+	Internalloop:
+	for i := 0; i < 4; i++ { // N_FLOORS ca marche pas
+		for _, elevator := range Elevatorlist {
+			if info, ok := statelist[elevator.Address]; ok {
+				if i != 0 && (info.State == "UP" && info.PreviousFloor+i == request.Floor) || (info.State == "DOWN" && info.PreviousFloor-i == request.Floor) {
+					if statelist[elevator.Address].Ipsource == localip {						
+						internalrequest = request
+					} else {
+						delete(statelist, elevator.Address)
+						continue Internalloop					
+					}
+				}
+			}
+		}
+		for _, elevator := range Elevatorlist {
+			if info, ok := statelist[elevator.Address]; ok {
+				if info.State == "IDLE" && (info.PreviousFloor == request.Floor+i || info.PreviousFloor == request.Floor-i) {
+					if statelist[elevator.Address].Ipsource == localip {
+						internalrequest = request						
+					} else {
+						delete(statelist, elevator.Address)	
+						continue Internalloop					
+					}
+				}
+			}
+		}
+	}
+
+}
 
 // Nextrequest is made to look into all request in order to get the best elevator
 func Nextrequest(localip string, Elevatorlist []extra.Elevator) Network.Request {
@@ -14,70 +101,17 @@ func Nextrequest(localip string, Elevatorlist []extra.Elevator) Network.Request 
 		statelist[host] = info
 	}
 	requestlist := Network.GetRequestList()
-insideloop:
+
+loop:
 	for _, request := range requestlist {
-		if request.Direction != Elevator.BUTTON_COMMAND {
-			continue insideloop
-		}
-		for _, elevator := range Elevatorlist {
-			if info, ok := statelist[elevator.Address]; ok {
-				if ((info.State == "UP" || info.State == "IDLE") && info.PreviousFloor <= request.Floor) || ((info.State == "DOWN" || info.State == "IDLE") && info.PreviousFloor >= request.Floor) {
-					if info.Ipsource == request.Ipsource {
-						if info.Ipsource == localip {
-							return request
-						} else {
-							delete(statelist, elevator.Address)
-							continue insideloop
-						}
-					}
-				}
-			}
-		}
-		for _, elevator := range Elevatorlist {
-			if info, ok := statelist[elevator.Address]; ok {
-				if (info.State == "UP" && info.PreviousFloor >= request.Floor) || (info.State == "DOWN" && info.PreviousFloor <= request.Floor){
-					if info.Ipsource == request.Ipsource {
-						if info.Ipsource == localip {
-							return request
-						} else {
-							delete(statelist, elevator.Address)
-							continue insideloop
-						}
-					}
-				}
-			}
-		}
-	}
-requestloop:
-	for _, request := range requestlist {
-		if request.Direction == Elevator.BUTTON_COMMAND {
-			continue requestloop
-		}
-		for i := 0; i < 4; i++ {    // N_FLOORS ca marche pas
-			for _, elevator := range Elevatorlist {
-				if info, ok := statelist[elevator.Address]; ok {
-					if i != 0 && (info.State == "UP" && info.PreviousFloor+i == request.Floor) || (info.State == "DOWN" && info.PreviousFloor-i == request.Floor) {
-						if statelist[elevator.Address].Ipsource == localip {
-							return request
-						} else {
-							delete(statelist, elevator.Address)
-							continue requestloop
-						}
-					}
-				}
-			}
-			for _, elevator := range Elevatorlist {
-				if info, ok := statelist[elevator.Address]; ok {
-					if info.State == "IDLE" && (info.PreviousFloor == request.Floor+i || info.PreviousFloor == request.Floor-i) {
-						if statelist[elevator.Address].Ipsource == localip {
-							return request
-						} else {
-							delete(statelist, elevator.Address)
-							continue requestloop
-						}
-					}
-				}
-			}
+		if !InternalOrExternal(request) {
+			go Externalrequest(localip, Elevatorlist, request)
+			return externalrequest
+			continue loop
+		} else {
+			go Internalrequest(localip, Elevatorlist, request)
+			return internalrequest
+			continue loop
 		}
 	}
 	return Network.NoRequest[0]
