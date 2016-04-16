@@ -1,6 +1,3 @@
-//A completer 
-//ajouter les imports
-
 package Elevator
 import (
 	"driver"
